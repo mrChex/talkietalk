@@ -64,9 +64,9 @@
 %%% API
 %%%===================================================================
 
-start_link(Args) ->
+start_link(TalkieModule) ->
 
-  gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+  gen_server:start_link({local, ?SERVER}, ?MODULE, [TalkieModule], []).
 
 talks() -> gen_server:call(?SERVER, talks).
 
@@ -87,10 +87,10 @@ message(Msg) when is_map(Msg)->
 %%% gen_server callbacks
 %%%===================================================================
 
-init(Args) ->
-  io:format("Args in init :): ~p~n", [Args]),
+init([TalkieModule]) ->
   {ok, #{
-    talks => [] % list of talks
+    talks => [], % list of talks
+    talkie_module => TalkieModule
   }}.
 
 handle_call(talks, _, #{talks := Talks} = State)->
@@ -100,11 +100,11 @@ handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
 
-handle_cast({chat_msg, #{chat := Chat} = Msg}, #{talks := Talks} = State) ->
+handle_cast({chat_msg, #{chat := Chat} = Msg}, #{talks := Talks, talkie_module := TalkieModule} = State) ->
 
   case getTalk(Chat, Talks) of
     no_talk ->
-      {ok, TalkPid} = talkietalk_talk:start(Msg),
+      {ok, TalkPid} = talkietalk_talk:start(TalkieModule, Msg),
       erlang:monitor(process, TalkPid),
       Talk = #{
         chat => Chat,

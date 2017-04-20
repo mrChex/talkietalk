@@ -3,7 +3,7 @@
 -behaviour(gen_fsm).
 
 %% API
--export([start/1]).
+-export([start/2]).
 
 %% gen_fsm callbacks
 -export([
@@ -15,17 +15,15 @@
   code_change/4
 ]).
 
-start(Msg) -> gen_fsm:start(?MODULE, Msg, []).
+start(TalkieModule, Msg) -> gen_fsm:start(?MODULE, [TalkieModule, Msg], []).
 
-init(Msg) ->
+init([{Module, Fun}, Msg]) ->
   #{chat := #{
     id := ChatId,
     type := Type
   }} = Msg,
 
-
-
-  StateName = {talkietalk_example_welcome, main},
+  StateName = {Module, Fun},
 
   {ok, StateName, #{
     id => ChatId,
