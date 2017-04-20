@@ -1,0 +1,12 @@
+{application, talkietalk, [
+  {description, ""},
+  {vsn, "0.0.1"},
+  {registered, [talkietalk]},
+  {applications, [
+    kernel,
+    stdlib,
+    inets
+  ]},
+  {mod, {talkietalk, []}},
+  {env, []}
+]}.
