@@ -94,7 +94,9 @@ handle_cast({update, #{ <<"edited_message">> := Message, <<"update_id">> := Upda
 
   #{<<"chat">> := #{<<"id">> := ChatId}} = Message,
 
-  telegram:sendMessage(ChatId, <<"О, отредактированное сообщение. Обработаю его еще раз."/utf8>>),
+  spawn(fun() ->
+    sendMessage(ChatId, <<"О, отредактированное сообщение. Обработаю его еще раз."/utf8>>)
+  end),
   talkietalk_talkie:message(Message),
 
   {noreply, State#{

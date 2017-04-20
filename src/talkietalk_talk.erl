@@ -24,15 +24,19 @@ init([{Module, Fun}, Msg]) ->
   }} = Msg,
 
   StateName = {Module, Fun},
+  Debug = application:get_env(talkietalk, debug, false),
 
   {ok, StateName, #{
     id => ChatId,
-    type => Type
+    type => Type,
+    debug => Debug
   }}.
 
 
-handle_event({msg, Msg}, {StateModule, StateName} = StateFullName, #{id := ChatId} = State)->
+handle_event({msg, #{text := <<"/terminate">>}}, _, #{debug := Debug} = State) when Debug =:= true->
+  {stop, normal, State};
 
+handle_event({msg, Msg}, {StateModule, StateName} = StateFullName, #{id := ChatId} = State)->
   case StateModule:StateName(Msg, ChatId, State) of
     unknown ->
       #{text := _Text, from := #{first_name := FirstName}} = Msg,
@@ -43,16 +47,6 @@ handle_event({msg, Msg}, {StateModule, StateName} = StateFullName, #{id := ChatI
           StateModuleBin/binary, ":"/utf8, StateNameBin/binary>>
       ),
       {next_state, StateFullName, State};
-    Response -> Response
-  end;
-
-handle_event({msg, Msg}, StateName, #{id := ChatId} = State)->
-  case talk:StateName(Msg, ChatId, State) of
-    unknown ->
-      #{text := _Text, from := #{first_name := FirstName}} = Msg,
-      StateNameBin = atom_to_binary(StateName, utf8),
-      talkietalk_telegram:sendMessage(ChatId, <<FirstName/binary, ", я не знаю как на это отвечать в состоянии "/utf8, StateNameBin/binary>>),
-      {next_state, StateName, State};
     Response -> Response
   end;
 
