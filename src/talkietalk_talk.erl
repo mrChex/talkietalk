@@ -17,20 +17,21 @@
 
 start(TalkieModule, Msg) -> gen_fsm:start(?MODULE, [TalkieModule, Msg], []).
 
-init([{Module, Fun}, Msg]) ->
-  #{chat := #{
+init([{Module, Fun}, Chat]) ->
+  #{
     id := ChatId,
     type := Type
-  }} = Msg,
+  } = Chat,
 
   StateName = {Module, Fun},
   Debug = application:get_env(talkietalk, debug, false),
-
-  {ok, StateName, #{
+  State = #{
     id => ChatId,
     type => Type,
     debug => Debug
-  }}.
+  },
+
+  {ok, StateName, State}.
 
 
 handle_event({msg, #{text := <<"/terminate">>}}, _, #{debug := Debug} = State) when Debug =:= true->
@@ -49,6 +50,21 @@ handle_event({msg, Msg}, {StateModule, StateName} = StateFullName, #{id := ChatI
       {next_state, StateFullName, State};
     Response -> Response
   end;
+
+handle_event({callback, From, Chat, MessageId, Q}, StateFullName, State)->
+  {CallbackModule, CallbackFun} = application:get_env(talkietalk, callback_handler, {talkietalk_example_callback, handle}),
+
+  {Answer, NewStateName, NewState} = case CallbackModule:CallbackFun({From, Chat, MessageId, Q}, State) of
+    {answer, CallbackAnswer, CallbackState} -> {CallbackAnswer, StateFullName, CallbackState};
+    {next_state, NextStateFullName, NextState} -> {#{}, NextStateFullName, NextState};
+    noanswer -> {#{}, StateFullName, State}
+  end,
+
+  talkietalk_telegram:answerCallbackQuery(Answer#{
+    callback_query_id => maps:get(query_id, Q)
+  }),
+
+  {next_state, NewStateName, NewState};
 
 handle_event(Event, StateName, State) ->
   io:format("SOME EVENT IN TALK! ~p~n", [Event]),

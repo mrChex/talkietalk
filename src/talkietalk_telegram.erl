@@ -16,18 +16,20 @@
 
 %% api
 -export([
+  request/2,
+
 %%  getUpdates/0,
   sendMessage/2,
   sendMessage/3,
   sendMessage/4,
   sendMarkdownMessage/2,
-  sendMessage/5
-%%  request/2
+  sendMessage/5,
+  answerCallbackQuery/1
 ]).
 
 -define(SERVER, ?MODULE).
 
--define(CHECK_UPDATES_DELAY, 2000).
+-define(CHECK_UPDATES_DELAY, 10).
 
 %%%===================================================================
 %%% API
@@ -76,6 +78,20 @@ handle_call({sendMessage, ChatId, Text, ReplyTo, ReplyMarkup, ParseMode}, From, 
   end),
   {noreply, State};
 
+handle_call({answerCallbackQuery, Answer}, From, #{telegram_token := Token} = State)->
+  spawn(fun() ->
+    Reply = request(Token, <<"answerCallbackQuery">>, Answer),
+    gen_server:reply(From, Reply)
+  end),
+  {noreply, State};
+
+handle_call({request, Method, Params}, From, #{telegram_token := Token} = State)->
+  spawn(fun() ->
+    Reply = request(Token, Method, Params),
+    gen_server:reply(From, Reply)
+  end),
+  {noreply, State};
+
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
@@ -103,8 +119,23 @@ handle_cast({update, #{ <<"edited_message">> := Message, <<"update_id">> := Upda
     last_update_id => UpdateId
   }};
 
+handle_cast({update, #{<<"callback_query">> := CallbackQuery, <<"update_id">> := UpdateId}}, State)->
 
-handle_cast(_Request, State) ->
+  talkietalk_talkie:callback_query(CallbackQuery),
+
+  {noreply, State#{
+    last_update_id => UpdateId
+  }};
+
+
+handle_cast({update, #{<<"update_id">> := UpdateId} = Request }, State) ->
+  io:format("Cant telegram update: ~p~n", [Request]),
+  {noreply, State#{
+    last_update_id => UpdateId
+  }};
+
+handle_cast(Request, State) ->
+  io:format("Cant handle cast request: ~p~n", [Request]),
   {noreply, State}.
 
 
@@ -146,6 +177,12 @@ sendMarkdownMessage(ChatId, Text) ->
 
 sendMessage(ChatId, Text, ReplyTo, ReplyMarkup, ParseMode)->
   gen_server:call(?SERVER, {sendMessage, ChatId, Text, ReplyTo, ReplyMarkup, ParseMode}).
+
+answerCallbackQuery(Answer) ->
+  gen_server:call(?SERVER, {answerCallbackQuery, Answer}).
+
+request(Method, Params) ->
+  gen_server:call(?SERVER, {request, Method, Params}).
 
 request(Token, Method, Params) when is_binary(Method), is_map(Params)->
   Uri = <<"https://api.telegram.org/bot", Token/binary, "/", Method/binary>>,
