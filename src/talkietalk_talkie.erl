@@ -18,7 +18,8 @@
 -export([
   talks/0,
   message/1,
-  callback_query/1
+  callback_query/1,
+  inline_query/1
 ]).
 
 
@@ -157,6 +158,10 @@ handle_cast({callback, #{
 
   {noreply, NewState};
 
+handle_cast({inline_query, #{from := From} = Query}, State)->
+  {TalkId, NewState} = get_or_create_talk(From, State),
+  send_to_talk(TalkId, {inline_query, Query}),
+  {noreply, NewState};
 
 
 handle_cast(_Request, State) ->
@@ -251,6 +256,16 @@ callback(QueryId, From, ChatInstance, Message, InlineMessageId, Data, GameShortN
     inline_message_id => InlineMessageId,
     data => Data,
     game_short_name => GameShortName
+  }}).
+
+inline_query(#{<<"id">> := Id, <<"from">> := From, <<"query">> := Query, <<"offset">> := Offset} = Q) ->
+  Location = maps:get(<<"location">>, Q, null),
+  gen_server:cast(?SERVER, {inline_query, #{
+    id => Id,
+    from => userToType(From),
+    query => Query,
+    offset => Offset,
+    location => Location
   }}).
 
 -spec getTalk(binary(), [talk()]) -> talk() | no_talk.

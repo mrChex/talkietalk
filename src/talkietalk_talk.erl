@@ -66,6 +66,17 @@ handle_event({callback, From, Chat, MessageId, Q}, StateFullName, State)->
 
   {next_state, NewStateName, NewState};
 
+handle_event({inline_query, Q}, StateFullName, State)->
+
+  {Module, Fun} = application:get_env(talkietalk, inline_handler, {talkietalk_example_inline, handle}),
+
+  NewState = case Module:Fun(query, Q, State) of
+    ignore -> State;
+    {state, NextState} -> NextState
+  end,
+
+  {next_state, StateFullName, NewState};
+
 handle_event(Event, StateName, State) ->
   io:format("SOME EVENT IN TALK! ~p~n", [Event]),
   {next_state, StateName, State}.

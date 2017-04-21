@@ -23,6 +23,7 @@
   sendMessage/3,
   sendMessage/4,
   sendMarkdownMessage/2,
+  sendHTMLMessage/2,
   sendMessage/5,
   answerCallbackQuery/1
 ]).
@@ -127,6 +128,14 @@ handle_cast({update, #{<<"callback_query">> := CallbackQuery, <<"update_id">> :=
     last_update_id => UpdateId
   }};
 
+handle_cast({update, #{<<"inline_query">> := InlineQuery, <<"update_id">> := UpdateId}}, State)->
+
+  talkietalk_talkie:inline_query(InlineQuery),
+
+  {noreply, State#{
+    last_update_id => UpdateId
+  }};
+
 
 handle_cast({update, #{<<"update_id">> := UpdateId} = Request }, State) ->
   io:format("Cant telegram update: ~p~n", [Request]),
@@ -174,6 +183,9 @@ sendMessage(ChatId, Text, ReplyTo, ReplyMarkup) -> sendMessage(ChatId, Text, Rep
 
 sendMarkdownMessage(ChatId, Text) ->
   sendMessage(ChatId, Text, null, null, markdown).
+
+sendHTMLMessage(ChatId, Text) ->
+  sendMessage(ChatId, Text, null, null, html).
 
 sendMessage(ChatId, Text, ReplyTo, ReplyMarkup, ParseMode)->
   gen_server:call(?SERVER, {sendMessage, ChatId, Text, ReplyTo, ReplyMarkup, ParseMode}).
