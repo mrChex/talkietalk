@@ -19,15 +19,15 @@ start(TalkieModule, Msg) -> gen_fsm:start(?MODULE, [TalkieModule, Msg], []).
 
 init([{Module, Fun}, Chat]) ->
   #{
-    id := ChatId,
-    type := Type
+    id := ChatId
+%%    type := Type
   } = Chat,
 
   StateName = {Module, Fun},
   Debug = application:get_env(talkietalk, debug, false),
   State = #{
     id => ChatId,
-    type => Type,
+%%    type => Type,
     debug => Debug
   },
 
