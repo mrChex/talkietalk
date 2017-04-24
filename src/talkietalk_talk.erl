@@ -25,20 +25,31 @@ init([{Module, Fun}, Chat]) ->
 
   StateName = {Module, Fun},
   Debug = application:get_env(talkietalk, debug, false),
+  GlobalHandler = application:get_env(talkietalk, global_handler, false),
   State = #{
     id => ChatId,
 %%    type => Type,
-    debug => Debug
+    debug => Debug,
+    global_handler => GlobalHandler
   },
 
   {ok, StateName, State}.
 
 
+
+handle_msg({StateModule, StateName}, Msg, ChatId, #{global_handler := {GM, GF}} = State)->
+  case StateModule:StateName(Msg, ChatId, State) of
+    unknown -> GM:GF(Msg, ChatId, State);
+    Response -> Response
+  end;
+handle_msg({StateModule, StateName}, Msg, ChatId, State)->
+  StateModule:StateName(Msg, ChatId, State).
+
 handle_event({msg, #{text := <<"/terminate">>}}, _, #{debug := Debug} = State) when Debug =:= true->
   {stop, normal, State};
 
 handle_event({msg, Msg}, {StateModule, StateName} = StateFullName, #{id := ChatId} = State)->
-  case StateModule:StateName(Msg, ChatId, State) of
+  case handle_msg(StateFullName, Msg, ChatId, State) of
     unknown ->
       #{text := _Text, from := #{first_name := FirstName}} = Msg,
       StateNameBin = atom_to_binary(StateName, utf8),
