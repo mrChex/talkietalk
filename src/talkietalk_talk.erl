@@ -78,6 +78,7 @@ handle_event({msg, Msg}, {StateModule, StateName} = StateFullName, #{id := ChatI
       ),
       {next_state, StateFullName, State};
     noreply -> {next_state, StateFullName, State};
+    {set_state, NewState}-> {next_state, StateFullName, NewState};
     Response -> Response
   end;
 
