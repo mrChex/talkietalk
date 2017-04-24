@@ -88,7 +88,7 @@ handle_event({callback, From, Chat, MessageId, Q}, StateFullName, State)->
   {Answer, NewStateName, NewState} = case CallbackModule:CallbackFun({From, Chat, MessageId, Q}, State) of
     {answer, CallbackAnswer, CallbackState} -> {CallbackAnswer, StateFullName, CallbackState};
     {next_state, NextStateFullName, NextState} -> {#{}, NextStateFullName, NextState};
-    {set_state, NewState}-> {#{}, StateFullName, NewState};
+    {set_state, NextState}-> {#{}, StateFullName, NextState};
     noanswer -> {#{}, StateFullName, State}
   end,
 
