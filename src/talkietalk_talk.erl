@@ -37,9 +37,9 @@ init([{Module, Fun}, Chat]) ->
 
 
 
-handle_msg({StateModule, StateName}, Msg, ChatId, #{global_handler := {GM, GF}} = State)->
+handle_msg({StateModule, StateName} = StateFullName, Msg, ChatId, #{global_handler := {GM, GF}} = State)->
   case StateModule:StateName(Msg, ChatId, State) of
-    unknown -> GM:GF(Msg, ChatId, State);
+    unknown -> GM:GF(StateFullName, Msg, ChatId, State);
     Response -> Response
   end;
 handle_msg({StateModule, StateName}, Msg, ChatId, State)->
@@ -59,6 +59,7 @@ handle_event({msg, Msg}, {StateModule, StateName} = StateFullName, #{id := ChatI
           StateModuleBin/binary, ":"/utf8, StateNameBin/binary>>
       ),
       {next_state, StateFullName, State};
+    noreply -> {next_state, StateFullName, State};
     Response -> Response
   end;
 
