@@ -25,19 +25,37 @@ init([{Module, Fun}, Chat]) ->
 
   StateName = {Module, Fun},
   Debug = application:get_env(talkietalk, debug, false),
+
   GlobalHandler = application:get_env(talkietalk, global_handler, false),
+  GlobalPreHandler = application:get_env(talkietalk, global_pre_handler, false),
+
   State = #{
     id => ChatId,
 %%    type => Type,
     debug => Debug,
-    global_handler => GlobalHandler
+    global_handler => GlobalHandler,
+    global_pre_handler => GlobalPreHandler
   },
 
   {ok, StateName, State}.
 
 
-
-handle_msg({StateModule, StateName} = StateFullName, Msg, ChatId, #{global_handler := {GM, GF}} = State)->
+% i know - its shit, but who care when it work )
+% FIXME: refactor
+handle_msg({StateModule, StateName} = StateFullName, Msg, ChatId, #{global_pre_handler := {GPM, GPF}, global_handler := false} = State)->
+  case GPM:GPF(StateFullName, Msg, ChatId, State) of
+    unknown -> StateModule:StateName(Msg, ChatId, State);
+    Response -> Response
+  end;
+handle_msg({StateModule, StateName} = StateFullName, Msg, ChatId, #{global_pre_handler := {GPM, GPF}, global_handler := {GM, GF}} = State)->
+  case GPM:GPF(StateFullName, Msg, ChatId, State) of
+    unknown -> case StateModule:StateName(Msg, ChatId, State) of
+      unknown -> GM:GF(StateFullName, Msg, ChatId, State);
+      Response -> Response
+    end;
+    Response -> Response
+  end;
+handle_msg({StateModule, StateName} = StateFullName, Msg, ChatId, #{global_pre_handler := false, global_handler := {GM, GF}} = State)->
   case StateModule:StateName(Msg, ChatId, State) of
     unknown -> GM:GF(StateFullName, Msg, ChatId, State);
     Response -> Response
